@@ -5,14 +5,14 @@ import {
   KeyboardButton,
   ReplyKeyboardMarkup,
   ReplyKeyboardRemove,
-} from './telegram-types'
+} from './core/types/typegram'
 import { is2D } from './core/helpers/check'
 
 type Hideable<B> = B & { hide?: boolean }
 type HideableKBtn = Hideable<KeyboardButton>
 type HideableIKBtn = Hideable<InlineKeyboardButton>
 
-class Markup<
+export class Markup<
   T extends
     | InlineKeyboardMarkup
     | ReplyKeyboardMarkup

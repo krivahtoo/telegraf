@@ -1,19 +1,24 @@
 const { Telegraf, Markup } = require('telegraf')
 
-const bot = new Telegraf(process.env.BOT_TOKEN)
+const token = process.env.BOT_TOKEN
+if (token === undefined) {
+  throw new Error('BOT_TOKEN must be provided!')
+}
+
+const bot = new Telegraf(token)
 
 bot.use(Telegraf.log())
 
-bot.command('onetime', ({ reply }) =>
-  reply('One time keyboard', Markup
+bot.command('onetime', (ctx) =>
+  ctx.reply('One time keyboard', Markup
     .keyboard(['/simple', '/inline', '/pyramid'])
     .oneTime()
     .resize()
   )
 )
 
-bot.command('custom', ({ reply }) => {
-  return reply('Custom buttons keyboard', Markup
+bot.command('custom', async (ctx) => {
+  return await ctx.reply('Custom buttons keyboard', Markup
     .keyboard([
       ['🔍 Search', '😎 Popular'], // Row1 with 2 buttons
       ['☸ Setting', '📞 Feedback'], // Row2 with 2 buttons
@@ -124,3 +129,7 @@ bot.action(/.+/, (ctx) => {
 })
 
 bot.launch()
+
+// Enable graceful stop
+process.once('SIGINT', () => bot.stop('SIGINT'))
+process.once('SIGTERM', () => bot.stop('SIGTERM'))

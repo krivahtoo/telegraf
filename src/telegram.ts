@@ -1,9 +1,10 @@
-import * as replicators from './core/replicators'
+import * as tg from './core/types/typegram'
 import * as tt from './telegram-types'
 import ApiClient from './core/network/client'
 import { isAbsolute } from 'path'
+import { URL } from 'url'
 
-class Telegram extends ApiClient {
+export class Telegram extends ApiClient {
   /**
    * Get basic information about the bot
    */
@@ -22,7 +23,7 @@ class Telegram extends ApiClient {
   /**
    * Get download link to a file
    */
-  async getFileLink(fileId: string | tt.File) {
+  async getFileLink(fileId: string | tg.File) {
     if (typeof fileId === 'string') {
       fileId = await this.getFile(fileId)
     } else if (fileId.file_path === undefined) {
@@ -38,10 +39,16 @@ class Telegram extends ApiClient {
       return url
     }
 
-    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-    return `${this.options.apiRoot}/file/bot${this.token}/${fileId.file_path}`
+    return new URL(
+      `./file/${this.options.apiMode}${this.token}/${fileId.file_path!}`,
+      this.options.apiRoot
+    )
   }
 
+  /**
+   * Directly request incoming updates.
+   * You should probably use `Telegraf::launch` instead.
+   */
   getUpdates(
     timeout: number,
     limit: number,
@@ -188,7 +195,7 @@ class Telegram extends ApiClient {
     longitude: number,
     title: string,
     address: string,
-    extra: tt.ExtraVenue
+    extra?: tt.ExtraVenue
   ) {
     return this.callApi('sendVenue', {
       latitude,
@@ -219,7 +226,7 @@ class Telegram extends ApiClient {
     chatId: number | string,
     phoneNumber: string,
     firstName: string,
-    extra: tt.ExtraContact
+    extra?: tt.ExtraContact
   ) {
     return this.callApi('sendContact', {
       chat_id: chatId,
@@ -234,7 +241,7 @@ class Telegram extends ApiClient {
    */
   sendPhoto(
     chatId: number | string,
-    photo: tt.Opts<'sendPhoto'>['photo'],
+    photo: tg.Opts<'sendPhoto'>['photo'],
     extra?: tt.ExtraPhoto
   ) {
     return this.callApi('sendPhoto', { chat_id: chatId, photo, ...extra })
@@ -254,7 +261,7 @@ class Telegram extends ApiClient {
    */
   sendDocument(
     chatId: number | string,
-    document: tt.Opts<'sendDocument'>['document'],
+    document: tg.Opts<'sendDocument'>['document'],
     extra?: tt.ExtraDocument
   ) {
     return this.callApi('sendDocument', { chat_id: chatId, document, ...extra })
@@ -268,7 +275,7 @@ class Telegram extends ApiClient {
    */
   sendAudio(
     chatId: number | string,
-    audio: tt.Opts<'sendAudio'>['audio'],
+    audio: tg.Opts<'sendAudio'>['audio'],
     extra?: tt.ExtraAudio
   ) {
     return this.callApi('sendAudio', { chat_id: chatId, audio, ...extra })
@@ -280,7 +287,7 @@ class Telegram extends ApiClient {
    */
   sendSticker(
     chatId: number | string,
-    sticker: tt.Opts<'sendSticker'>['sticker'],
+    sticker: tg.Opts<'sendSticker'>['sticker'],
     extra?: tt.ExtraSticker
   ) {
     return this.callApi('sendSticker', { chat_id: chatId, sticker, ...extra })
@@ -293,7 +300,7 @@ class Telegram extends ApiClient {
    */
   sendVideo(
     chatId: number | string,
-    video: tt.Opts<'sendVideo'>['video'],
+    video: tg.Opts<'sendVideo'>['video'],
     extra?: tt.ExtraVideo
   ) {
     return this.callApi('sendVideo', { chat_id: chatId, video, ...extra })
@@ -305,7 +312,7 @@ class Telegram extends ApiClient {
    */
   sendAnimation(
     chatId: number | string,
-    animation: tt.Opts<'sendAnimation'>['animation'],
+    animation: tg.Opts<'sendAnimation'>['animation'],
     extra?: tt.ExtraAnimation
   ) {
     return this.callApi('sendAnimation', {
@@ -321,7 +328,7 @@ class Telegram extends ApiClient {
    */
   sendVideoNote(
     chatId: number | string,
-    videoNote: string | tt.InputFileVideoNote,
+    videoNote: string | tg.InputFileVideoNote,
     extra?: tt.ExtraVideoNote
   ) {
     return this.callApi('sendVideoNote', {
@@ -337,7 +344,7 @@ class Telegram extends ApiClient {
    */
   sendVoice(
     chatId: number | string,
-    voice: tt.Opts<'sendVoice'>['voice'],
+    voice: tg.Opts<'sendVoice'>['voice'],
     extra?: tt.ExtraVoice
   ) {
     return this.callApi('sendVoice', { chat_id: chatId, voice, ...extra })
@@ -362,7 +369,10 @@ class Telegram extends ApiClient {
    */
   sendMediaGroup(
     chatId: number | string,
-    media: ReadonlyArray<tt.InputMediaPhoto | tt.InputMediaVideo>,
+    media:
+      | ReadonlyArray<tg.InputMediaPhoto | tg.InputMediaVideo>
+      | readonly tg.InputMediaAudio[]
+      | readonly tg.InputMediaDocument[],
     extra?: tt.ExtraMediaGroup
   ) {
     return this.callApi('sendMediaGroup', { chat_id: chatId, media, ...extra })
@@ -378,7 +388,7 @@ class Telegram extends ApiClient {
     chatId: number | string,
     question: string,
     options: readonly string[],
-    extra: tt.ExtraPoll
+    extra?: tt.ExtraPoll
   ) {
     return this.callApi('sendPoll', {
       chat_id: chatId,
@@ -417,7 +427,7 @@ class Telegram extends ApiClient {
   stopPoll(
     chatId: number | string,
     messageId: number,
-    extra: tt.ExtraStopPoll
+    extra?: tt.ExtraStopPoll
   ) {
     return this.callApi('stopPoll', {
       chat_id: chatId,
@@ -464,7 +474,7 @@ class Telegram extends ApiClient {
    */
   answerInlineQuery(
     inlineQueryId: string,
-    results: readonly tt.InlineQueryResult[],
+    results: readonly tg.InlineQueryResult[],
     extra?: tt.ExtraAnswerInlineQuery
   ) {
     return this.callApi('answerInlineQuery', {
@@ -474,7 +484,7 @@ class Telegram extends ApiClient {
     })
   }
 
-  setChatPermissions(chatId: number | string, permissions: tt.ChatPermissions) {
+  setChatPermissions(chatId: number | string, permissions: tg.ChatPermissions) {
     return this.callApi('setChatPermissions', { chat_id: chatId, permissions })
   }
 
@@ -483,11 +493,17 @@ class Telegram extends ApiClient {
    * @param chatId Unique identifier for the target group or username of the target supergroup or channel (in the format `@channelusername`)
    * @param untilDate Date when the user will be unbanned, unix time. If user is banned for more than 366 days or less than 30 seconds from the current time they are considered to be banned forever
    */
-  kickChatMember(chatId: number | string, userId: number, untilDate?: number) {
+  kickChatMember(
+    chatId: number | string,
+    userId: number,
+    untilDate?: number,
+    extra?: tt.ExtraKickChatMember
+  ) {
     return this.callApi('kickChatMember', {
       chat_id: chatId,
       user_id: userId,
       until_date: untilDate,
+      ...extra,
     })
   }
 
@@ -543,9 +559,38 @@ class Telegram extends ApiClient {
     return this.callApi('exportChatInviteLink', { chat_id: chatId })
   }
 
+  createChatInviteLink(
+    chatId: number | string,
+    extra?: tt.ExtraCreateChatInviteLink
+  ) {
+    return this.callApi('createChatInviteLink', {
+      chat_id: chatId,
+      ...extra,
+    })
+  }
+
+  editChatInviteLink(
+    chatId: number | string,
+    inviteLink: string,
+    extra?: tt.ExtraEditChatInviteLink
+  ) {
+    return this.callApi('editChatInviteLink', {
+      chat_id: chatId,
+      invite_link: inviteLink,
+      ...extra,
+    })
+  }
+
+  revokeChatInviteLink(chatId: number | string, inviteLink: string) {
+    return this.callApi('revokeChatInviteLink', {
+      chat_id: chatId,
+      invite_link: inviteLink,
+    })
+  }
+
   setChatPhoto(
     chatId: number | string,
-    photo: tt.Opts<'setChatPhoto'>['photo']
+    photo: tg.Opts<'setChatPhoto'>['photo']
   ) {
     return this.callApi('setChatPhoto', { chat_id: chatId, photo })
   }
@@ -630,12 +675,10 @@ class Telegram extends ApiClient {
   answerCbQuery(
     callbackQueryId: string,
     text?: string,
-    showAlert?: boolean,
-    extra?: { cache_time?: number }
+    extra?: tt.ExtraAnswerCbQuery
   ) {
     return this.callApi('answerCallbackQuery', {
       text,
-      show_alert: showAlert,
       callback_query_id: callbackQueryId,
       ...extra,
     })
@@ -659,7 +702,7 @@ class Telegram extends ApiClient {
   answerShippingQuery(
     shippingQueryId: string,
     ok: boolean,
-    shippingOptions: readonly tt.ShippingOption[] | undefined,
+    shippingOptions: readonly tg.ShippingOption[] | undefined,
     errorMessage: string | undefined
   ) {
     return this.callApi('answerShippingQuery', {
@@ -727,7 +770,7 @@ class Telegram extends ApiClient {
     messageId: number | undefined,
     inlineMessageId: string | undefined,
     caption: string | undefined,
-    extra: tt.ExtraEditMessageCaption = {}
+    extra?: tt.ExtraEditMessageCaption
   ) {
     return this.callApi('editMessageCaption', {
       caption,
@@ -754,8 +797,8 @@ class Telegram extends ApiClient {
     chatId: number | string | undefined,
     messageId: number | undefined,
     inlineMessageId: string | undefined,
-    media: tt.InputMedia,
-    extra: tt.ExtraEditMessageMedia = {}
+    media: tg.InputMedia,
+    extra?: tt.ExtraEditMessageMedia
   ) {
     return this.callApi('editMessageMedia', {
       chat_id: chatId,
@@ -778,7 +821,7 @@ class Telegram extends ApiClient {
     chatId: number | string | undefined,
     messageId: number | undefined,
     inlineMessageId: string | undefined,
-    markup: tt.InlineKeyboardMarkup | undefined
+    markup: tg.InlineKeyboardMarkup | undefined
   ) {
     return this.callApi('editMessageReplyMarkup', {
       chat_id: chatId,
@@ -810,7 +853,7 @@ class Telegram extends ApiClient {
     chatId: number | string | undefined,
     messageId: number | undefined,
     inlineMessageId: string | undefined,
-    markup?: tt.InlineKeyboardMarkup
+    markup?: tg.InlineKeyboardMarkup
   ) {
     return this.callApi('stopMessageLiveLocation', {
       chat_id: chatId,
@@ -859,7 +902,7 @@ class Telegram extends ApiClient {
    */
   uploadStickerFile(
     ownerId: number,
-    stickerFile: tt.Opts<'uploadStickerFile'>['png_sticker']
+    stickerFile: tg.Opts<'uploadStickerFile'>['png_sticker']
   ) {
     return this.callApi('uploadStickerFile', {
       user_id: ownerId,
@@ -919,7 +962,7 @@ class Telegram extends ApiClient {
   setStickerSetThumb(
     name: string,
     userId: number,
-    thumb: tt.Opts<'setStickerSetThumb'>['thumb']
+    thumb: tg.Opts<'setStickerSetThumb'>['thumb']
   ) {
     return this.callApi('setStickerSetThumb', { name, user_id: userId, thumb })
   }
@@ -943,13 +986,13 @@ class Telegram extends ApiClient {
    * Change the list of the bot's commands.
    * @param commands A list of bot commands to be set as the list of the bot's commands. At most 100 commands can be specified.
    */
-  setMyCommands(commands: readonly tt.BotCommand[]) {
+  setMyCommands(commands: readonly tg.BotCommand[]) {
     return this.callApi('setMyCommands', { commands })
   }
 
   setPassportDataErrors(
     userId: number,
-    errors: readonly tt.PassportElementError[]
+    errors: readonly tg.PassportElementError[]
   ) {
     return this.callApi('setPassportDataErrors', {
       user_id: userId,
@@ -965,25 +1008,10 @@ class Telegram extends ApiClient {
    */
   sendCopy(
     chatId: number | string,
-    message: tt.Message,
-    extra?: object
-  ): Promise<tt.MessageId> {
-    if (!message) {
-      throw new Error('Message is required')
-    }
-    const type = Object.keys(replicators.copyMethods).find(
-      (type) => type in message
-    ) as keyof typeof replicators.copyMethods
-    if (!type) {
-      throw new Error('Unsupported message type')
-    }
-    const opts = {
-      chat_id: chatId,
-      // @ts-expect-error
-      ...replicators[type](message), // assume we have the necessary fields
-      ...extra,
-    }
-    return this.callApi(replicators.copyMethods[type], opts)
+    message: tg.Message,
+    extra?: tt.ExtraCopyMessage
+  ): Promise<tg.MessageId> {
+    return this.copyMessage(chatId, message.chat.id, message.message_id, extra)
   }
 
   /**
@@ -1021,4 +1049,4 @@ class Telegram extends ApiClient {
   }
 }
 
-export = Telegram
+export default Telegram

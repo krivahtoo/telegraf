@@ -1,111 +1,20 @@
 /** @format */
 
-import {
-  Chat,
-  InlineKeyboardMarkup,
-  LabeledPrice,
-  Message,
-  Typegram,
-} from 'typegram'
+import { Message, Opts, Telegram, Update } from './core/types/typegram'
+import { UnionKeys } from './deunionize'
 
-export * from 'typegram/callback'
-export * from 'typegram/inline'
-export * from 'typegram/manage'
-export * from 'typegram/message'
-export * from 'typegram/passport'
-export * from 'typegram/payment'
-export * from 'typegram/update'
+export { Markup } from './markup'
 
-export interface InputFileByPath {
-  source: string
-}
-export interface InputFileByReadableStream {
-  source: NodeJS.ReadableStream
-}
-export interface InputFileByBuffer {
-  source: Buffer
-}
-export interface InputFileByURL {
-  url: string
-  filename?: string
-}
-export type InputFile =
-  | InputFileByPath
-  | InputFileByReadableStream
-  | InputFileByBuffer
-  | InputFileByURL
-
-type TelegrafTypegram = Typegram<InputFile>
-
-export type Telegram = TelegrafTypegram['Telegram']
-export type Opts<M extends keyof Telegram> = TelegrafTypegram['Opts'][M]
-export type InputMedia = TelegrafTypegram['InputMedia']
-export type InputMediaPhoto = TelegrafTypegram['InputMediaPhoto']
-export type InputMediaVideo = TelegrafTypegram['InputMediaVideo']
-export type InputMediaAnimation = TelegrafTypegram['InputMediaAnimation']
-export type InputMediaAudio = TelegrafTypegram['InputMediaAudio']
-export type InputMediaDocument = TelegrafTypegram['InputMediaDocument']
-
+// tiny helper types
 export type ChatAction = Opts<'sendChatAction'>['action']
 
-export type ChatType = Chat['type']
-
-export type UpdateType =
-  | 'callback_query'
-  | 'channel_post'
-  | 'chosen_inline_result'
-  | 'edited_channel_post'
-  | 'edited_message'
-  | 'inline_query'
-  | 'message'
-  | 'pre_checkout_query'
-  | 'shipping_query'
-  | 'poll'
-  | 'poll_answer'
-
-export type MessageSubTypes =
-  | 'voice'
-  | 'video_note'
-  | 'video'
-  | 'venue'
-  | 'text'
-  | 'supergroup_chat_created'
-  | 'successful_payment'
-  | 'sticker'
-  | 'pinned_message'
-  | 'photo'
-  | 'new_chat_title'
-  | 'new_chat_photo'
-  | 'new_chat_members'
-  | 'migrate_to_chat_id'
-  | 'migrate_from_chat_id'
-  | 'location'
-  | 'left_chat_member'
-  | 'invoice'
-  | 'group_chat_created'
-  | 'game'
-  | 'dice'
-  | 'document'
-  | 'delete_chat_photo'
-  | 'contact'
-  | 'channel_chat_created'
-  | 'audio'
-  | 'passport_data'
-  | 'poll'
-  | 'connected_website'
-  | 'animation'
-
-/**
- * Sending video notes by a URL is currently unsupported
- */
-export type InputFileVideoNote = Exclude<InputFile, InputFileByURL>
-
+// extra types
 /**
  * Create an `Extra*` type from the arguments of a given method `M extends keyof Telegram` but `Omit`ting fields with key `K` from it.
  *
  * Note that `chat_id` may not be specified in `K` because it is `Omit`ted by default.
  */
-export type MakeExtra<
+type MakeExtra<
   M extends keyof Telegram,
   K extends keyof Omit<Opts<M>, 'chat_id'> = never
 > = Omit<Opts<M>, 'chat_id' | K>
@@ -115,6 +24,10 @@ export type ExtraAddStickerToSet = MakeExtra<
   'name' | 'user_id'
 >
 export type ExtraAnimation = MakeExtra<'sendAnimation', 'animation'>
+export type ExtraAnswerCbQuery = MakeExtra<
+  'answerCallbackQuery',
+  'text' | 'callback_query_id'
+>
 export type ExtraAnswerInlineQuery = MakeExtra<
   'answerInlineQuery',
   'inline_query_id' | 'results'
@@ -128,12 +41,17 @@ export type ExtraCopyMessage = MakeExtra<
   'copyMessage',
   'from_chat_id' | 'message_id'
 >
+export type ExtraCreateChatInviteLink = MakeExtra<'createChatInviteLink'>
 export type ExtraCreateNewStickerSet = MakeExtra<
   'createNewStickerSet',
   'name' | 'title' | 'user_id'
 >
 export type ExtraDice = MakeExtra<'sendDice'>
 export type ExtraDocument = MakeExtra<'sendDocument', 'document'>
+export type ExtraEditChatInviteLink = MakeExtra<
+  'editChatInviteLink',
+  'invite_link'
+>
 export type ExtraEditMessageCaption = MakeExtra<
   'editMessageCaption',
   'message_id' | 'inline_message_id' | 'caption'
@@ -148,25 +66,21 @@ export type ExtraEditMessageMedia = MakeExtra<
 >
 export type ExtraEditMessageText = MakeExtra<
   'editMessageText',
-  'message_id' | 'inline_message_id'
+  'message_id' | 'inline_message_id' | 'text'
 >
 export type ExtraGame = MakeExtra<'sendGame', 'game_short_name'>
-export interface ExtraInvoice extends ExtraReplyMessage {
-  /**
-   * Inline keyboard. If empty, one 'Pay total price' button will be shown. If not empty, the first button must be a Pay button.
-   */
-  reply_markup?: InlineKeyboardMarkup
-
-  /**
-   * Does not exist, see https://core.telegram.org/bots/api#sendinvoice
-   */
-  disable_web_page_preview?: never
-
-  /**
-   * Does not exist, see https://core.telegram.org/bots/api#sendinvoice
-   */
-  parse_mode?: never
-}
+export type NewInvoiceParameters = MakeExtra<
+  'sendInvoice',
+  | 'disable_notification'
+  | 'reply_to_message_id'
+  | 'allow_sending_without_reply'
+  | 'reply_markup'
+>
+export type ExtraInvoice = MakeExtra<'sendInvoice', keyof NewInvoiceParameters>
+export type ExtraKickChatMember = MakeExtra<
+  'kickChatMember',
+  'user_id' | 'until_date'
+>
 export type ExtraLocation = MakeExtra<'sendLocation', 'latitude' | 'longitude'>
 export type ExtraMediaGroup = MakeExtra<'sendMediaGroup', 'media'>
 export type ExtraPhoto = MakeExtra<'sendPhoto', 'photo'>
@@ -185,87 +99,37 @@ export type ExtraVideo = MakeExtra<'sendVideo', 'video'>
 export type ExtraVideoNote = MakeExtra<'sendVideoNote', 'video_note'>
 export type ExtraVoice = MakeExtra<'sendVoice', 'voice'>
 
-export type IncomingMessage = Message
+// types used for inference of ctx object
 
-/** @deprecated */
-export interface NewInvoiceParameters {
-  /**
-   * Product name, 1-32 characters
-   */
-  title: string
+/** Possible update types */
+export type UpdateType = Exclude<UnionKeys<Update>, keyof Update>
 
-  /**
-   * Product description, 1-255 characters
-   */
-  description: string
+/** Possible message subtypes. Same as the properties on a message object */
+export type MessageSubType =
+  | 'forward_date'
+  | Exclude<
+      UnionKeys<Message>,
+      keyof Message.CaptionableMessage | 'entities' | 'media_group_id'
+    >
 
-  /**
-   * Bot-defined invoice payload, 1-128 bytes. This will not be displayed to the user, use for your internal processes.
-   */
-  payload: string
+type ExtractPartial<T extends object, U extends object> = T extends unknown
+  ? Required<T> extends U
+    ? T
+    : never
+  : never
 
-  /**
-   * Payments provider token, obtained via Botfather
-   */
-  provider_token: string
-
-  /**
-   * Unique deep-linking parameter that can be used to generate this invoice when used as a start parameter
-   */
-  start_parameter: string
-
-  /**
-   * Three-letter ISO 4217 currency code, see more on currencies
-   */
-  currency: string
-
-  /**
-   * Price breakdown, a list of components (e.g. product price, tax, discount, delivery cost, delivery tax, bonus, etc.)
-   */
-  prices: LabeledPrice[]
-
-  /**
-   * URL of the product photo for the invoice. Can be a photo of the goods or a marketing image for a service. People like it better when they see what they are paying for.
-   */
-  photo_url?: string
-
-  /**
-   * Photo size
-   */
-  photo_size?: number
-
-  /**
-   * Photo width
-   */
-  photo_width?: number
-
-  /**
-   * Photo height
-   */
-  photo_height?: number
-
-  /**
-   * Pass True, if you require the user's full name to complete the order
-   */
-  need_name?: boolean
-
-  /**
-   * Pass True, if you require the user's phone number to complete the order
-   */
-  need_phone_number?: boolean
-
-  /**
-   * Pass True, if you require the user's email to complete the order
-   */
-  need_email?: boolean
-
-  /**
-   * Pass True, if you require the user's shipping address to complete the order
-   */
-  need_shipping_address?: boolean
-
-  /**
-   * Pass True, if the final price depends on the shipping method
-   */
-  is_flexible?: boolean
-}
+/**
+ * Maps [[`Composer.on`]]'s `updateType` or `messageSubType` to a `tt.Update` subtype.
+ */
+export type MountMap = {
+  [T in UpdateType]: Extract<Update, Record<T, object>>
+} &
+  {
+    [T in MessageSubType]: {
+      message: ExtractPartial<
+        Update.MessageUpdate['message'],
+        Record<T, unknown>
+      >
+      update_id: number
+    }
+  }

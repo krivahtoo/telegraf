@@ -1,100 +1,34 @@
+import * as tg from './core/types/typegram'
 import * as tt from './telegram-types'
+import { Deunionize, PropOr, UnionKeys } from './deunionize'
 import ApiClient from './core/network/client'
-import { Tail } from './types'
 import Telegram from './telegram'
+
+type Tail<T> = T extends [unknown, ...infer U] ? U : never
 
 type Shorthand<FName extends Exclude<keyof Telegram, keyof ApiClient>> = Tail<
   Parameters<Telegram[FName]>
 >
 
-type UnionToIntersection<U> = (
-  U extends unknown ? (k: U) => void : never
-) extends (k: infer I) => void
-  ? I
-  : never
-
-type Deunionize<T extends object> = T & Partial<UnionToIntersection<T>>
-
-const deunionize = <T extends object>(t: T): Deunionize<T> => t
-
-const UpdateTypes = [
-  'callback_query',
-  'channel_post',
-  'chosen_inline_result',
-  'edited_channel_post',
-  'edited_message',
-  'inline_query',
-  'shipping_query',
-  'pre_checkout_query',
-  'message',
-  'poll',
-  'poll_answer',
-] as const
-
-const MessageSubTypes = [
-  'voice',
-  'video_note',
-  'video',
-  'animation',
-  'venue',
-  'text',
-  'supergroup_chat_created',
-  'successful_payment',
-  'sticker',
-  'pinned_message',
-  'photo',
-  'new_chat_title',
-  'new_chat_photo',
-  'new_chat_members',
-  'migrate_to_chat_id',
-  'migrate_from_chat_id',
-  'location',
-  'left_chat_member',
-  'invoice',
-  'group_chat_created',
-  'game',
-  'dice',
-  'document',
-  'delete_chat_photo',
-  'contact',
-  'channel_chat_created',
-  'audio',
-  'connected_website',
-  'passport_data',
-  'poll',
-  'forward_date',
-] as const
-
-const MessageSubTypesMapping = {
-  forward_date: 'forward',
-}
-
-export class Context {
-  readonly updateType: tt.UpdateType
-  readonly updateSubTypes: ReadonlyArray<typeof MessageSubTypes[number]>
+export class Context<U extends Deunionize<tg.Update> = tg.Update> {
   readonly state: Record<string | symbol, any> = {}
 
   constructor(
-    readonly update: tt.Update,
+    readonly update: U,
     readonly tg: Telegram,
-    public readonly botInfo: tt.UserFromGetMe,
-    private readonly options: { channelMode?: boolean } = {}
-  ) {
-    this.updateType = UpdateTypes.find((key) => key in this.update)!
-    // prettier-ignore
-    if (this.updateType === 'message' || (this.options.channelMode && this.updateType === 'channel_post')) {
-      this.updateSubTypes = MessageSubTypes
-        .filter((key) => key in (this.update as any)[this.updateType])
-        .map((type) => (MessageSubTypesMapping as any)[type] || type)
-    } else {
-      this.updateSubTypes = []
-    }
-    Object.getOwnPropertyNames(Context.prototype)
-      .filter(
-        (key) =>
-          key !== 'constructor' && typeof (this as any)[key] === 'function'
+    readonly botInfo: tg.UserFromGetMe
+  ) {}
+
+  get updateType() {
+    const types = Object.keys(this.update).filter(
+      (k) => typeof this.update[k as keyof U] === 'object'
+    )
+    if (types.length !== 1) {
+      throw new Error(
+        `Cannot determine \`updateType\` of ${JSON.stringify(this.update)}`
       )
-      .forEach((key) => ((this as any)[key] = (this as any)[key].bind(this)))
+    }
+    return types[0] as UpdateTypes<U>
   }
 
   get me() {
@@ -106,82 +40,83 @@ export class Context {
   }
 
   get message() {
-    if (!('message' in this.update)) return undefined
-    return deunionize(this.update.message)
+    return this.update.message as PropOr<U, 'message'>
   }
 
   get editedMessage() {
-    if (!('edited_message' in this.update)) return undefined
-    return deunionize(this.update.edited_message)
+    return this.update.edited_message as PropOr<U, 'edited_message'>
   }
 
   get inlineQuery() {
-    if (!('inline_query' in this.update)) return undefined
-    return this.update.inline_query
+    return this.update.inline_query as PropOr<U, 'inline_query'>
   }
 
   get shippingQuery() {
-    if (!('shipping_query' in this.update)) return undefined
-    return this.update.shipping_query
+    return this.update.shipping_query as PropOr<U, 'shipping_query'>
   }
 
   get preCheckoutQuery() {
-    if (!('pre_checkout_query' in this.update)) return undefined
-    return this.update.pre_checkout_query
+    return this.update.pre_checkout_query as PropOr<U, 'pre_checkout_query'>
   }
 
   get chosenInlineResult() {
-    if (!('chosen_inline_result' in this.update)) return undefined
-    return this.update.chosen_inline_result
+    return this.update.chosen_inline_result as PropOr<U, 'chosen_inline_result'>
   }
 
   get channelPost() {
-    if (!('channel_post' in this.update)) return undefined
-    return deunionize(this.update.channel_post)
+    return this.update.channel_post as PropOr<U, 'channel_post'>
   }
 
   get editedChannelPost() {
-    if (!('edited_channel_post' in this.update)) return undefined
-    return deunionize(this.update.edited_channel_post)
+    return this.update.edited_channel_post as PropOr<U, 'edited_channel_post'>
   }
 
   get callbackQuery() {
-    if (!('callback_query' in this.update)) return undefined
-    return deunionize(this.update.callback_query)
+    return this.update.callback_query as PropOr<U, 'callback_query'>
   }
 
   get poll() {
-    if (!('poll' in this.update)) return undefined
-    return this.update.poll
+    return this.update.poll as PropOr<U, 'poll'>
   }
 
   get pollAnswer() {
-    if (!('poll_answer' in this.update)) return undefined
-    return this.update.poll_answer
+    return this.update.poll_answer as PropOr<U, 'poll_answer'>
   }
 
-  get chat() {
+  get myChatMember() {
+    return this.update.my_chat_member as PropOr<U, 'my_chat_member'>
+  }
+
+  get chatMember() {
+    return this.update.chat_member as PropOr<U, 'chat_member'>
+  }
+
+  get chat(): Getter<U, 'chat'> {
     return (
-      this.message ??
-      this.editedMessage ??
-      this.callbackQuery?.message ??
-      this.channelPost ??
-      this.editedChannelPost
-    )?.chat
+      this.chatMember ??
+      this.myChatMember ??
+      getMessageFromAnySource(this)
+    )?.chat as Getter<U, 'chat'>
+  }
+
+  get senderChat() {
+    return getMessageFromAnySource(this)?.sender_chat as Getter<
+      U,
+      'sender_chat'
+    >
   }
 
   get from() {
     return (
-      this.message ??
-      this.editedMessage ??
       this.callbackQuery ??
       this.inlineQuery ??
-      this.channelPost ??
-      this.editedChannelPost ??
       this.shippingQuery ??
       this.preCheckoutQuery ??
-      this.chosenInlineResult
-    )?.from
+      this.chosenInlineResult ??
+      this.chatMember ??
+      this.myChatMember ??
+      getMessageFromAnySource(this)
+    )?.from as Getter<U, 'from'>
   }
 
   get inlineMessageId() {
@@ -194,6 +129,7 @@ export class Context {
     return this.message?.passport_data
   }
 
+  /** @deprecated use `ctx.telegram.webhookReply` */
   get webhookReply(): boolean {
     return this.tg.webhookReply
   }
@@ -207,10 +143,8 @@ export class Context {
     method: string
   ): asserts value is T {
     if (value === undefined) {
-      throw new Error(
-        `Telegraf: "${method}" isn't available for "${
-          this.updateType
-        }::${this.updateSubTypes.toString()}"`
+      throw new TypeError(
+        `Telegraf: "${method}" isn't available for "${this.updateType}"`
       )
     }
   }
@@ -271,7 +205,7 @@ export class Context {
     )
   }
 
-  editMessageMedia(media: tt.InputMedia, extra?: tt.ExtraEditMessageMedia) {
+  editMessageMedia(media: tg.InputMedia, extra?: tt.ExtraEditMessageMedia) {
     this.assert(this.callbackQuery ?? this.inlineMessageId, 'editMessageMedia')
     return this.telegram.editMessageMedia(
       this.chat?.id,
@@ -282,7 +216,7 @@ export class Context {
     )
   }
 
-  editMessageReplyMarkup(markup: tt.InlineKeyboardMarkup | undefined) {
+  editMessageReplyMarkup(markup: tg.InlineKeyboardMarkup | undefined) {
     this.assert(
       this.callbackQuery ?? this.inlineMessageId,
       'editMessageReplyMarkup'
@@ -314,7 +248,7 @@ export class Context {
     )
   }
 
-  stopMessageLiveLocation(markup?: tt.InlineKeyboardMarkup) {
+  stopMessageLiveLocation(markup?: tg.InlineKeyboardMarkup) {
     this.assert(
       this.callbackQuery ?? this.inlineMessageId,
       'stopMessageLiveLocation'
@@ -340,6 +274,21 @@ export class Context {
   exportChatInviteLink(...args: Shorthand<'exportChatInviteLink'>) {
     this.assert(this.chat, 'exportChatInviteLink')
     return this.telegram.exportChatInviteLink(this.chat.id, ...args)
+  }
+
+  createChatInviteLink(...args: Shorthand<'createChatInviteLink'>) {
+    this.assert(this.chat, 'createChatInviteLink')
+    return this.telegram.createChatInviteLink(this.chat.id, ...args)
+  }
+
+  editChatInviteLink(...args: Shorthand<'editChatInviteLink'>) {
+    this.assert(this.chat, 'editChatInviteLink')
+    return this.telegram.editChatInviteLink(this.chat.id, ...args)
+  }
+
+  revokeChatInviteLink(...args: Shorthand<'revokeChatInviteLink'>) {
+    this.assert(this.chat, 'revokeChatInviteLink')
+    return this.telegram.revokeChatInviteLink(this.chat.id, ...args)
   }
 
   kickChatMember(...args: Shorthand<'kickChatMember'>) {
@@ -429,7 +378,7 @@ export class Context {
     return this.telegram.getChatMembersCount(this.chat.id, ...args)
   }
 
-  setPassportDataErrors(errors: readonly tt.PassportElementError[]) {
+  setPassportDataErrors(errors: readonly tg.PassportElementError[]) {
     this.assert(this.from, 'setPassportDataErrors')
     return this.telegram.setPassportDataErrors(this.from.id, errors)
   }
@@ -574,7 +523,7 @@ export class Context {
     return this.telegram.getMyCommands()
   }
 
-  setMyCommands(commands: readonly tt.BotCommand[]) {
+  setMyCommands(commands: readonly tg.BotCommand[]) {
     return this.telegram.setMyCommands(commands)
   }
 
@@ -595,8 +544,9 @@ export class Context {
     if (typeof messageId !== 'undefined') {
       return this.telegram.deleteMessage(this.chat.id, messageId)
     }
-    this.assert(this.message, 'deleteMessage')
-    return this.telegram.deleteMessage(this.chat.id, this.message.message_id)
+    const message = getMessageFromAnySource(this)
+    this.assert(message, 'deleteMessage')
+    return this.telegram.deleteMessage(this.chat.id, message.message_id)
   }
 
   forwardMessage(
@@ -605,24 +555,52 @@ export class Context {
       disable_notification?: boolean
     }
   ) {
-    this.assert(this.message, 'forwardMessage')
+    const message = getMessageFromAnySource(this)
+    this.assert(message, 'forwardMessage')
     return this.telegram.forwardMessage(
       chatId,
-      this.message.chat.id,
-      this.message.message_id,
+      message.chat.id,
+      message.message_id,
       extra
     )
   }
 
   copyMessage(chatId: string | number, extra?: tt.ExtraCopyMessage) {
-    this.assert(this.message, 'copyMessage')
+    const message = getMessageFromAnySource(this)
+    this.assert(message, 'copyMessage')
     return this.telegram.copyMessage(
       chatId,
-      this.message.chat.id,
-      this.message.message_id,
+      message.chat.id,
+      message.message_id,
       extra
     )
   }
 }
 
 export default Context
+
+type UpdateTypes<U extends Deunionize<tg.Update>> = Extract<
+  UnionKeys<U>,
+  tt.UpdateType
+>
+
+export type GetUpdateContent<
+  U extends tg.Update
+> = U extends tg.Update.CallbackQueryUpdate
+  ? U['callback_query']['message']
+  : U[UpdateTypes<U>]
+
+type Getter<U extends Deunionize<tg.Update>, P extends string> = PropOr<
+  GetUpdateContent<U>,
+  P
+>
+
+function getMessageFromAnySource<U extends tg.Update>(ctx: Context<U>) {
+  return (
+    ctx.message ??
+    ctx.editedMessage ??
+    ctx.callbackQuery?.message ??
+    ctx.channelPost ??
+    ctx.editedChannelPost
+  )
+}

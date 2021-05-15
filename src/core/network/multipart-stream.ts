@@ -1,6 +1,6 @@
+import * as stream from 'stream'
 import { hasPropType } from '../helpers/check'
 import SandwichStream from 'sandwich-stream'
-import stream from 'stream'
 const CRNL = '\r\n'
 
 interface Part {
@@ -19,8 +19,7 @@ class MultipartStream extends SandwichStream {
 
   addPart(part: Part) {
     const partStream = new stream.PassThrough()
-    for (const key in part.headers) {
-      const header = part.headers[key]
+    for (const [key, header] of Object.entries(part.headers)) {
       partStream.write(`${key}:${header}${CRNL}`)
     }
     partStream.write(CRNL)
@@ -43,4 +42,4 @@ class MultipartStream extends SandwichStream {
   }
 }
 
-export = MultipartStream
+export default MultipartStream

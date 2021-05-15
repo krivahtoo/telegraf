@@ -1,50 +1,39 @@
 import * as http from 'http'
 import d from 'debug'
-import { Update } from '../../telegram-types'
+import { Update } from '../types/typegram'
+import safeCompare = require('safe-compare')
 const debug = d('telegraf:webhook')
 
-export = function (
+export default function (
   hookPath: string,
-  updateHandler: (update: Update, res: http.ServerResponse) => Promise<void>,
-  errorHandler: (err: SyntaxError) => void
+  updateHandler: (update: Update, res: http.ServerResponse) => Promise<void>
 ) {
-  return (
+  return async (
     req: http.IncomingMessage,
     res: http.ServerResponse,
-    next?: () => void
-  ): void => {
-    debug('Incoming request', req.method, req.url)
-    if (req.method !== 'POST' || req.url !== hookPath) {
-      if (typeof next === 'function') {
-        return next()
-      }
+    next = (): void => {
       res.statusCode = 403
+      debug('Replying with status code', res.statusCode)
       return res.end()
     }
+  ): Promise<void> => {
+    debug('Incoming request', req.method, req.url)
+    if (req.method !== 'POST' || !safeCompare(hookPath, req.url!)) {
+      return next()
+    }
     let body = ''
-    req.on('data', (chunk: string) => {
-      body += chunk.toString()
-    })
-    req.on('end', () => {
-      let update: Update
-      try {
-        update = JSON.parse(body)
-      } catch (error) {
-        res.writeHead(415)
-        res.end()
-        return errorHandler(error)
-      }
-      updateHandler(update, res)
-        .then(() => {
-          if (!res.finished) {
-            res.end()
-          }
-        })
-        .catch((err: unknown) => {
-          debug('Webhook error', err)
-          res.writeHead(500)
-          res.end()
-        })
-    })
+    for await (const chunk of req) {
+      body += String(chunk)
+    }
+    let update: Update
+    try {
+      update = JSON.parse(body)
+    } catch (error: unknown) {
+      res.writeHead(415)
+      res.end()
+      debug('Failed to parse request body:', error)
+      return
+    }
+    await updateHandler(update, res)
   }
 }
